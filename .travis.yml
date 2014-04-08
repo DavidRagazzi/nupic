@@ -59,6 +59,7 @@ install:
   - "cd"
   # Add the compiled NuPIC to the PYTHONPATH
   - "export PYTHONPATH=${PYTHONPATH}:${NTA}/lib/python${TRAVIS_PYTHON_VERSION}/site-packages"
+  - "echo $PYTHONPATH"
 
 script:
   - "cd $TRAVIS_BUILD_DIR/build/scripts"
