@@ -100,7 +100,7 @@ Important notes:
 
 Now that NuPIC has build, you'll need to make sure it is in your `$PYTHONPATH`.
 
-    export PYTHONPATH=${PYTHONPATH}:${NTA}
+    export PYTHONPATH=${PYTHONPATH}:${NTA}/lib/python<version>/site-packages"
 
 #### Run the tests:
 
