@@ -52,14 +52,7 @@ macro (set_environment_variable variable value incremental)
       set(new_value "${new_value}:${current_value}")
     endif()
 
-    if(LINUX)
-      execute_process(COMMAND export ${variable}=${new_value})
-    elseif(OSX)
-      execute_process(COMMAND launchctl setenv ${variable} ${new_value})
-    elseif(WINDOWS)
-      execute_process(COMMAND setx ${variable} ${new_value})
-    endif()
-
+    set($ENV{${variable}} ${new_value})
     set(NEED_LOGOFF ON)
   endif()
 
