@@ -11,7 +11,6 @@ git:
 
 env:
   global:
-    - NUPIC=$TRAVIS_BUILD_DIR
     - NTA=$HOME/nta/eng
 
     # For S3 upload from travis-artifacts
@@ -51,10 +50,10 @@ install:
   # Workaround for multiprocessing.Queue SemLock error from run_opf_bechmarks_test.
   # See: https://github.com/travis-ci/travis-cookbooks/issues/155
   - "sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm"
-  - pip install -q -r $NUPIC/external/common/requirements.txt
+  - pip install -q -r $TRAVIS_BUILD_DIR/external/common/requirements.txt
   - "mkdir -p $TRAVIS_BUILD_DIR/build/scripts"
   - "cd $TRAVIS_BUILD_DIR/build/scripts"
-  - "cmake $NUPIC -DPROJECT_BUILD_RELEASE_DIR:STRING=$NTA"
+  - "cmake $TRAVIS_BUILD_DIR -DPROJECT_BUILD_RELEASE_DIR:STRING=$NTA"
   - "make -j3"
   - "cd"
   
@@ -67,27 +66,27 @@ script:
   - "make tests_pyhtm"
   # actual unit tests
   - "make tests_run_all"
-  - "cd"
+  - "cd $TRAVIS_BUILD_DIR"
 
   # run all example files
     # examples/bindings
-  - "python $NUPIC/examples/bindings/sparse_matrix_how_to.py"
-##  - "python $NUPIC/examples/bindings/svm_how_to.py" # tkinter missing in Travis build machine
-##  - "python $NUPIC/examples/bindings/temporal_pooler_how_to.py" # tkinter too
+  - "python $TRAVIS_BUILD_DIR/examples/bindings/sparse_matrix_how_to.py"
+##  - "python $TRAVIS_BUILD_DIR/examples/bindings/svm_how_to.py" # tkinter missing in Travis build machine
+##  - "python $TRAVIS_BUILD_DIR/examples/bindings/temporal_pooler_how_to.py" # tkinter too
     # examples/opf (run atleast 1 from each category)
-  - "python $NUPIC/examples/opf/bin/OpfRunExperiment.py $NUPIC/examples/opf/experiments/anomaly/spatial/2field_few_skewed/"
-  - "python $NUPIC/examples/opf/bin/OpfRunExperiment.py $NUPIC/examples/opf/experiments/anomaly/temporal/saw_200/"
-  - "python $NUPIC/examples/opf/bin/OpfRunExperiment.py $NUPIC/examples/opf/experiments/classification/category_TP_1/"
-  - "python $NUPIC/examples/opf/bin/OpfRunExperiment.py $NUPIC/examples/opf/experiments/missing_record/simple_0/"
-  - "python $NUPIC/examples/opf/bin/OpfRunExperiment.py $NUPIC/examples/opf/experiments/multistep/hotgym/"
-  - "python $NUPIC/examples/opf/bin/OpfRunExperiment.py $NUPIC/examples/opf/experiments/opfrunexperiment_test/simpleOPF/hotgym_1hr_agg/"
+  - "python $TRAVIS_BUILD_DIR/examples/opf/bin/OpfRunExperiment.py $TRAVIS_BUILD_DIR/examples/opf/experiments/anomaly/spatial/2field_few_skewed/"
+  - "python $TRAVIS_BUILD_DIR/examples/opf/bin/OpfRunExperiment.py $TRAVIS_BUILD_DIR/examples/opf/experiments/anomaly/temporal/saw_200/"
+  - "python $TRAVIS_BUILD_DIR/examples/opf/bin/OpfRunExperiment.py $TRAVIS_BUILD_DIR/examples/opf/experiments/classification/category_TP_1/"
+  - "python $TRAVIS_BUILD_DIR/examples/opf/bin/OpfRunExperiment.py $TRAVIS_BUILD_DIR/examples/opf/experiments/missing_record/simple_0/"
+  - "python $TRAVIS_BUILD_DIR/examples/opf/bin/OpfRunExperiment.py $TRAVIS_BUILD_DIR/examples/opf/experiments/multistep/hotgym/"
+  - "python $TRAVIS_BUILD_DIR/examples/opf/bin/OpfRunExperiment.py $TRAVIS_BUILD_DIR/examples/opf/experiments/opfrunexperiment_test/simpleOPF/hotgym_1hr_agg/"
              # opf/experiments/params - skip now
-  - "python $NUPIC/examples/opf/bin/OpfRunExperiment.py $NUPIC/examples/opf/experiments/spatial_classification/category_1/"
+  - "python $TRAVIS_BUILD_DIR/examples/opf/bin/OpfRunExperiment.py $TRAVIS_BUILD_DIR/examples/opf/experiments/spatial_classification/category_1/"
     # examples/prediction
-  - "python $NUPIC/examples/prediction/RunExperiment.py $NUPIC/examples/prediction/experiments/dutyCycle/problem/"
+  - "python $TRAVIS_BUILD_DIR/examples/prediction/RunExperiment.py $TRAVIS_BUILD_DIR/examples/prediction/experiments/dutyCycle/problem/"
     # examples/tp
-  - "python $NUPIC/examples/tp/hello_tp.py"
-  - "python $NUPIC/examples/tp/tp_test.py"
+  - "python $TRAVIS_BUILD_DIR/examples/tp/hello_tp.py"
+  - "python $TRAVIS_BUILD_DIR/examples/tp/tp_test.py"
 
 after_script:
   - travis_retry gem install travis-artifacts > /dev/null
