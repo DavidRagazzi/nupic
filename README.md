@@ -69,15 +69,15 @@ If you want develop, debug, or simply test NuPIC, clone it and do this:
     cd $NUPIC
     python setup.py develop
 
-'setup.py' is a python script that build and install locally NuPIC in a combined process of CMake and Make tools. So you can add extra options to the build process using 'cmake_options' or 'make_options' parameters. For example, this command line:
+'setup.py' is a python script that build and install locally NuPIC in a combined process of CMake and Make tools. So you can add extra options to the build process using '--cmake-options' or '--make-options' parameters. For example, this command line:
 
-    python setup.py develop make_options='-j3'
+    python setup.py develop build_nupic --make-options='-j3'
 
 specifies '3' as the maximum number of parallel jobs/threads that Make will use during the build in order to gain speed. However, you can increase this number depending your CPU.
 
 For build and test NuPIC using a IDE, use this command line:
 
-    python setup.py develop cmake_options='-G "Xcode"'
+    python setup.py develop build_nupic --cmake-options='-G "Xcode"'
 
 This will generate a Xcode IDE solution into `$NUPIC/build/scripts`. See this: http://www.cmake.org/Wiki/CMake_Generator_Specific_Information)
 
