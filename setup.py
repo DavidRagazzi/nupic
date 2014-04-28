@@ -1,7 +1,6 @@
 import sys
 import os
 import subprocess
-from distutils.command import build
 from distutils.core import setup, Command
 
 """
@@ -10,16 +9,18 @@ ANY EXTRA code related to build process MUST be put into CMake file.
 """
 
 def find_packages(repositoryDir):
-  # Traverse nupic directory and create packages for each subdir containing a __init__.py file
+  """ Traverse nupic directory and create packages for each subdir containing a
+  __init__.py file
+  """
   packages = []
   for root, dirs, files in os.walk(repositoryDir + '/nupic'):
       if '__init__.py' in files:
         subdir = root.replace(repositoryDir + '/', '')
-        packages.append(subdir.replace('/','.'))
+        packages.append(subdir.replace('/', '.'))
   return packages
 
 
-class BuildWithCMake(Command):
+class build_nupic(Command):
   """ NuPIC/CMake-specific build command handler
   """
   user_options = []
@@ -38,11 +39,19 @@ class BuildWithCMake(Command):
     self.cmake_options = ""
 
 
+  def finalize_options(self):
+    pass #ABC, must override
+
+
   def run(self):
-    # Read command line options looking for extra options for CMake and Make
-    # For example, an user could type:
-    #   python setup.py install build_nupic --make-options='-j3'
-    # which will add '-j3' option to Make commandline
+    """ Read command line options looking for extra options for CMake and Make
+
+    For example, an user could type:
+
+        python setup.py install build_nupic --make-options='-j3'
+
+    which will add '-j3' option to Make commandline.
+    """
 
     # Prepare directories to the CMake process
     repositoryDir = os.getcwd()
@@ -63,7 +72,6 @@ class BuildWithCMake(Command):
       sys.exit("Unable to build the project!")
     os.chdir(repositoryDir)
 
-    raise SystemExit(return_code)
 
 
 # Call the setup process
@@ -91,5 +99,5 @@ NuPIC is a library that provides the building blocks for online prediction syste
 
 For more information, see numenta.org or the NuPIC wiki (https://github.com/numenta/nupic/wiki).
 """,
-  cmdclass={"build_nupic": BuildWithCMake}
+  cmdclass={"build_nupic": build_nupic}
 )
