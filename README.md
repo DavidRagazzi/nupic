@@ -2,7 +2,7 @@
 
 ## Numenta Platform for Intelligent Computing [![Build Status](https://travis-ci.org/numenta/nupic.png?branch=master)](https://travis-ci.org/numenta/nupic)
 
-NuPIC is a library that provides the building blocks for online prediction systems.  The library contains the Cortical Learning Algorithm (CLA), but also the Online Prediction Framework (OPF) that allows clients to build prediction systems out of encoders, models, and metrics.
+NuPIC is a library that provides the building blocks for online prediction and anomaly detection systems.  The library contains the Cortical Learning Algorithm (CLA), but also the Online Prediction Framework (OPF) that allows clients to build prediction systems out of encoders, models, and metrics.
 
 For more information, see [numenta.org](http://numenta.org) or the [NuPIC wiki](https://github.com/numenta/nupic/wiki).
 
@@ -52,60 +52,59 @@ _Note_: If you get a "permission denied" error when using pip, you may add the -
 
 ## Build and test NuPIC:
 
-Set the following environment variables in your `~/.bashrc` file. `$NUPIC` is the path to your NuPIC repository and `$NTA` is the installation path for NuPIC. You may set a different path for `$NTA` or specify the location with CMake with the command line option `-DPROJECT_BUILD_RELEASE_DIR:STRING=/my/custom/path`.
+Set the following environment variables in your `~/.bashrc` file. `$NUPIC` is the path to your NuPIC repository.
 
     export NUPIC=<path to NuPIC repository>
-    export NTA=$NUPIC/build/release
-    export PYTHONPATH=$PYTHONPATH:$NTA/lib/python<version>/site-packages
 
-### Using command line
+### User instructions
 
-#### Configure and generate build files:
+If you want NuPIC only for your python apps consume it, simply do this:
 
-    mkdir -p $NUPIC/build/scripts
-    cd $NUPIC/build/scripts
-    cmake $NUPIC
+    pip nupic install (under construction)
 
-#### Build:
+### Developer instructions
 
-    cd $NUPIC/build/scripts
-    make -j3
+If you want develop, debug, or simply test NuPIC, clone it and do this:
 
-> **Note**: -j3 option specify '3' as the maximum number of parallel jobs/threads that Make will use during the build in order to gain speed. However, you can increase this number depending your CPU.
+    cd $NUPIC
+    python setup.py develop
+
+'setup.py' is a python script that build and install locally NuPIC in a combined process of CMake and Make tools. So you can add extra options to the build process using '--cmake-options' or '--make-options' parameters. For example, this command line:
+
+    python setup.py develop --make-options='-j3'
+
+specifies '3' as the maximum number of parallel jobs/threads that Make will use during the build in order to gain speed. However, you can increase this number depending your CPU.
+
+For build and test NuPIC using a IDE, use this command line:
+
+    python setup.py develop --cmake-options='-G "Xcode"'
+
+This will generate a Xcode IDE solution into `$NUPIC/build/scripts`. See this: http://www.cmake.org/Wiki/CMake_Generator_Specific_Information)
 
 #### Run the tests:
 
+By command line:
+
     cd $NUPIC/build/scripts
-    make <test> (where <test> can be C++ tests: 'tests_everything', 'tests_cpphtm' and 'tests_pyhtm' or Python tests: 'tests_run' and 'tests_run_all')
+    # all C++ tests
+    make tests_everything
+    # C++ HTM Network API tests
+    make tests_cpphtm
+    # Python HTM Network API tests
+    make tests_pyhtm
+    # Python OPF unit tests
+    make tests_run
+    # Python OPF unit and integration tests (requires mysql)
+    make tests_run_all
+    # Run all tests!
+    make tests_all
 
-### Using graphical interface
-
-#### Generate the IDE solution:
-
- * Open CMake executable.
- * Specify the source folder (`$NUPIC`).
- * Specify the build system folder (`$NUPIC/build/scripts`), i.e. where IDE solution will be created.
- * Click `Generate`.
- * Choose the IDE that interest you (remember that IDE choice is limited to your OS, i.e. Visual Studio is available only on CMake for Windows).
-
-#### Build:
+By IDE solution:
 
  * Open `nupic.*proj` solution file generated on `$NUPIC/build/scripts`.
- * Run `ALL_BUILD` project from your IDE.
-
-#### Run the tests:
-
- * Run any `tests_*` project from your IDE (check `output` panel to see the results).
+ * Run `ALL_BUILD` project.
+ * Run any `tests_*` project (check `output` panel to see the results).
 
 ### Examples
 
-You can run the examples using the OpfRunExperiment OPF client:
-
-    python $NUPIC/examples/opf/bin/OpfRunExperiment.py $NUPIC/examples/opf/experiments/multistep/hotgym/
-
-There are also some sample OPF clients. You can modify these to run your own
-data sets. One example is the hotgym prediction client:
-
-    python $NUPIC/examples/opf/clients/hotgym/hotgym.py
-
-Also check out other uses of the CLA on the [Getting Started](https://github.com/numenta/nupic/wiki/Getting-Started#next-steps) wiki page.
+For examples, tutorials, and screencasts about using NuPIC, see the [Using NuPIC](https://github.com/numenta/nupic/wiki/Using-NuPIC) wiki page.
