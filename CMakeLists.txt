@@ -870,11 +870,11 @@ install(CODE "execute_process(COMMAND ${PYTHON} ${REPOSITORY_DIR}/scripts/instal
 # Tests
 #
 add_custom_target(tests_run
-                  COMMAND python ${PROJECT_BUILD_RELEASE_DIR}/scripts/run_tests.py -n2 --coverage
+                  COMMAND python ${REPOSITORY_DIR}/scripts/run_tests.py -n2 --coverage
                   COMMENT "Python tests")
 
 add_custom_target(tests_run_all
-                  COMMAND python ${PROJECT_BUILD_RELEASE_DIR}/scripts/run_tests.py --all --coverage  # swarming tests fail with the -n parallel run
+                  COMMAND python ${REPOSITORY_DIR}/scripts/run_tests.py --all --coverage  # swarming tests fail with the -n parallel run
                   COMMENT "Python tests + swarming (requires DB)")
 
 add_custom_target(tests_pyhtm
