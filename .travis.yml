@@ -51,7 +51,7 @@ deploy:
   # Only deploy on master from one build job: linux, clang, python 2.7
   on:
     branch: master
-    condition: 
+    condition:
       - "$TRAVIS_OS_NAME == linux"
       - "$PY_VER == 2.7"
       - "$CC == clang"
@@ -69,7 +69,7 @@ before_install:
 
   # Get Darwin64 libs for OSX
   - "if [ $TRAVIS_OS_NAME = 'osx' ]; then git clone https://github.com/numenta/nupic-darwin64.git; fi"
-  - "if [ $TRAVIS_OS_NAME = 'osx' ]; then (cd nupic-darwin64 && git reset --hard c2908602fbea5f832c7edfa251f490807b429cc3); fi"
+  - "if [ $TRAVIS_OS_NAME = 'osx' ]; then (cd nupic-darwin64 && git reset --hard 6496136d3748f5f15eaf8e85e48c113d7447149b); fi"
   - "if [ $TRAVIS_OS_NAME = 'osx' ]; then source nupic-darwin64/bin/activate; fi"
   # Install cmake on OSX
   - "if [ $TRAVIS_OS_NAME = 'osx' ]; then brew install cmake; fi"
@@ -107,19 +107,24 @@ install:
   - "python -c 'import sys;import os;import nupic;sys.stdout.write(os.path.abspath(os.path.join(nupic.__file__, \"../..\")))'"
 
 script:
-  - "cd $TRAVIS_BUILD_DIR/build/scripts"
   # legacy binary tests
   - "make tests_pyhtm"
-  # actual unit tests
-  - "make tests_run_all"
+  # Python unit tests and prep for coveralls reporting
+  - "make python_unit_tests"
+  - "mv ${TRAVIS_BUILD_DIR}/.coverage ${TRAVIS_BUILD_DIR}/.coverage_unit"
+  # Python integration tests and prep for coveralls reporting
+  - "make python_integration_tests"
+  - "mv ${TRAVIS_BUILD_DIR}/.coverage ${TRAVIS_BUILD_DIR}/.coverage_integration"
+
+  - "cd ${TRAVIS_BUILD_DIR}"
 
   # run all example files
   # examples/bindings
   - "cd $NUPIC"
   - "python$PY_VER $NUPIC/examples/bindings/sparse_matrix_how_to.py"
-#  - "python $NUPIC/examples/bindings/svm_how_to.py" # tkinter missing in Travis build machine
-#  - "python $NUPIC/examples/bindings/temporal_pooler_how_to.py" # tkinter too
-  # examples/opf (run atleast 1 from each category)
+# - "python $NUPIC/examples/bindings/svm_how_to.py" # tkinter missing in Travis build machine
+# - "python $NUPIC/examples/bindings/temporal_pooler_how_to.py" # tkinter too
+  # examples/opf (run at least 1 from each category)
   - "python$PY_VER $NUPIC/scripts/run_opf_experiment.py $NUPIC/examples/opf/experiments/anomaly/spatial/2field_few_skewed/"
   - "python$PY_VER $NUPIC/scripts/run_opf_experiment.py $NUPIC/examples/opf/experiments/anomaly/temporal/saw_200/"
   - "python$PY_VER $NUPIC/scripts/run_opf_experiment.py $NUPIC/examples/opf/experiments/classification/category_TP_1/"
@@ -133,5 +138,7 @@ script:
   - "python$PY_VER $NUPIC/examples/tp/tp_test.py"
 
 after_success:
-  - "if [ $TRAVIS_OS_NAME = 'linux' ] && [ $PY_VER = '2.7' ] && [ $CC = 'clang' ]; then pip install coveralls; fi"
-  - "if [ $TRAVIS_OS_NAME = 'linux' ] && [ $PY_VER = '2.7' ] && [ $CC = 'clang' ]; then coveralls; fi"
+  - "if [ $TRAVIS_OS_NAME = 'linux' ] && [ $PY_VER = '2.7' ] && [ $CC = 'clang' ]; then pip install python-coveralls; fi"
+  # Only publishing unit test coverage at this point.
+  - "if [ $TRAVIS_OS_NAME = 'linux' ] && [ $PY_VER = '2.7' ] && [ $CC = 'clang' ]; then coveralls -i --data_file=.coverage_unit; fi"
+  # TODO: figure out how to publish integration test coverage as well.
