@@ -869,12 +869,16 @@ install(CODE "execute_process(COMMAND ${PYTHON} setup.py develop
 #
 # Tests
 #
-add_custom_target(tests_run
-                  COMMAND ${PYTHON} ${REPOSITORY_DIR}/scripts/run_tests.py -n2 --coverage
-                  COMMENT "Python tests")
+add_custom_target(python_unit_tests
+                  COMMAND python ${PROJECT_BUILD_RELEASE_DIR}/scripts/run_tests.py -u -n2 --coverage
+                  COMMENT "Python unit tests")
 
-add_custom_target(tests_run_all
-                  COMMAND ${PYTHON} ${REPOSITORY_DIR}/scripts/run_tests.py --all --coverage # swarming tests fail with the -n parallel run
+add_custom_target(python_integration_tests
+                  COMMAND python ${PROJECT_BUILD_RELEASE_DIR}/scripts/run_tests.py -i -n2 --coverage
+                  COMMENT "Python integration tests")
+
+add_custom_target(python_all_tests
+                  COMMAND python ${PROJECT_BUILD_RELEASE_DIR}/scripts/run_tests.py --all --coverage  # swarming tests fail with the -n parallel run
                   COMMENT "Python tests + swarming (requires DB)")
 
 add_custom_target(tests_pyhtm
@@ -885,16 +889,16 @@ add_custom_target(tests_cpphtm
                   COMMAND ${PROJECT_BUILD_BINARIES_DIR}/testcpphtm
                   COMMENT "Basic tests in C++")
 
-add_custom_target(tests_everything
-                  COMMAND ${PROJECT_BUILD_BINARIES_DIR}/testeverything
+add_custom_target(cpp_unit_tests
+                  COMMAND ${PROJECT_BUILD_RELEASE_DIR}/bin/testeverything
                   COMMENT "C++ unit tests")
 
 # Tests_all just calls other targets
 add_custom_target(tests_all
-                  DEPENDS tests_run
+                  DEPENDS python_all_tests
                   DEPENDS tests_pyhtm
                   DEPENDS tests_cpphtm
-                  DEPENDS tests_everything
+                  DEPENDS cpp_unit_tests
                   COMMENT "Running all tests")
 
 #
