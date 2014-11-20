@@ -75,27 +75,20 @@ class PassThroughEncoder(Encoder):
     return [0]
 
   ############################################################################
-  def encodeIntoArray(self, input, output):
+  def encodeIntoArray(self, inputValue, output):
     """See method description in base.py"""
-    if isinstance(input, basestring):
-      strInput = input
-      input = []
-      for c in strInput:
-        if c == "0":
-          input.append(0)
-        elif c == "1":
-          input.append(1)
-        else:
-          raise TypeError("Input should be string only with 0's and 1's.")
-    if len(input) != len(output):
-      raise ValueError("Different input (%i) and output (%i) sizes." % (
-          len(input), len(output)))
+    if not isinstance(inputValue, basestring):
+      raise TypeError("Input should be a string.")
 
-    if self.w is not None and sum(input) != self.w:
+    if len(inputValue) != len(output):
+      raise ValueError("Different input (%i) and output (%i) sizes." % (
+          len(inputValue), len(output)))
+
+    output[:] = [int(c) for c in inputValue]
+
+    if self.w is not None and sum(output) != self.w:
       raise ValueError("Input has %i bits but w was set to %i." % (
           sum(input), self.w))
-
-    output[:] = input[:]
 
     if self.verbosity >= 2:
       print "input:", input, "index:", index, "output:", output
