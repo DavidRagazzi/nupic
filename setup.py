@@ -1,6 +1,5 @@
 import sys
 import os
-import subprocess
 import shutil
 import glob
 import urllib2
@@ -28,82 +27,6 @@ class Setup:
     self.repositoryDir = os.getcwd()
     self.options = self.getCommandLineOptions()
     self.platform, self.bitness = self.getPlatformInfo()
-
-
-
-  def setup(self):
-    # Build and setup NuPIC
-    os.chdir(self.repositoryDir)
-    nupicCoreReleaseDir = self.prepareNupicCore()
-    extensions = self.getExtensionModules(nupicCoreReleaseDir)
-    setuptools.setup(
-      name="nupic",
-      version=self.getVersion(),
-      cmdclass={'build': CustomBuild, 'install': CustomInstall},
-      install_requires=self.findRequirements(),
-      packages=setuptools.find_packages(),
-      # A lot of this stuff may not be packaged properly, most of it was added in
-      # an effort to get a binary package prepared for nupic.regression testing
-      # on Travis-CI, but it wasn't done the right way. I'll be refactoring a lot
-      # of this for https://github.com/numenta/nupic/issues/408, so this will be
-      # changing soon. -- Matt
-      package_data={
-        "nupic.support": ["nupic-default.xml",
-                          "nupic-logging.conf"],
-        "nupic": ["README.md", "LICENSE.txt"],
-        "nupic.bindings": ["*.so", "*.dll", "*.i"],
-        "nupic.data": ["*.json"],
-        "nupic.frameworks.opf.exp_generator": ["*.json", "*.tpl"],
-        "nupic.frameworks.opf.jsonschema": ["*.json"],
-        "nupic.support.resources.images": [
-          "*.png", "*.gif", "*.ico", "*.graffle"],
-        "nupic.swarming.jsonschema": ["*.json"]
-      },
-      include_package_data=True,
-      ext_modules=extensions,
-      description="Numenta Platform for Intelligent Computing",
-      author="Numenta",
-      author_email="help@numenta.org",
-      url="https://github.com/numenta/nupic",
-      classifiers=[
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 2",
-        "License :: OSI Approved :: GNU General Public License (GPL)",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: POSIX :: Linux",
-        # It has to be "5 - Production/Stable" or else pypi rejects it!
-        "Development Status :: 5 - Production/Stable",
-        "Environment :: Console",
-        "Intended Audience :: Science/Research",
-        "Topic :: Scientific/Engineering :: Artificial Intelligence"
-      ],
-      long_description = """\
-Numenta Platform for Intelligent Computing: a machine intelligence platform that implements the HTM learning algorithms. HTM is a detailed computational theory of the neocortex. At the core of HTM are time-based continuous learning algorithms that store and recall spatial and temporal patterns. NuPIC is suited to a variety of problems, particularly anomaly detection and prediction of streaming data sources.
-
-For more information, see http://numenta.org or the NuPIC wiki at https://github.com/numenta/nupic/wiki.
-""")
-
-
-    # Copy binaries located at nupic.core dir into source dir
-    print "Copying binaries from " + nupicCoreReleaseDir + "/bin" + " to " + self.repositoryDir + "/bin..."
-    if not os.path.exists(self.repositoryDir + "/bin"):
-      os.makedirs(self.repositoryDir + "/bin")
-    shutil.copy(nupicCoreReleaseDir + "/bin/py_region_test", self.repositoryDir + "/bin")
-
-    # Copy bindings located at build dir into source dir
-    buildDir = glob.glob(self.repositoryDir + "/build/lib.*/")[0]
-    bindingsBuildDir = buildDir + "/nupic/bindings"
-    bindingsSourceDir = self.repositoryDir + "/nupic/bindings"
-    bindingLibraries = ["engine_internal", "algorithms", "math"]
-    print "Copying libraries from " + buildDir + " to " + self.repositoryDir + "..."
-    for library in bindingLibraries:
-      shutil.copy(bindingsBuildDir + "/" + library + ".py", bindingsSourceDir)
-      shutil.copy(bindingsBuildDir + "/" + "_" + library + self.getSharedLibExtension(),
-                  bindingsSourceDir)
-
-    # Copy cpp_region located at build dir into source dir
-    shutil.copy(buildDir + "/nupic/" + self.getLibPrefix() + "cpp_region" +
-                self.getSharedLibExtension(), self.repositoryDir + "/nupic")
 
 
 
@@ -221,7 +144,9 @@ For more information, see http://numenta.org or the NuPIC wiki at https://github
     Read the requirements.txt file and parse into requirements for setup's
     install_requirements option.
     """
-    requirementsPath = os.path.join(self.repositoryDir, "external/common/requirements.txt")
+    requirementsPath = os.path.join(
+      self.repositoryDir, "external/common/requirements.txt"
+    )
     return [
       line.strip()
       for line in open(requirementsPath).readlines()
@@ -326,7 +251,8 @@ For more information, see http://numenta.org or the NuPIC wiki at https://github
       extra_objects=commonObjects)
     extensions.append(libDynamicCppRegion)
 
-    # TODO: Find way to include HtmTest executable as extension. Not sure if this is possible -- David
+    # TODO: Find way to include HtmTest executable as extension. Not sure if
+    # this is possible -- David
 
     #
     # SWIG
@@ -469,125 +395,10 @@ For more information, see http://numenta.org or the NuPIC wiki at https://github
 
 
 
-  # Returns nupic.core release directory and source directory in tuple.
   def getDefaultNupicCoreDirectories(self):
     # Default nupic.core location is relative to the NuPIC checkout.
     return self.repositoryDir + "/extensions/core/build/release", \
            self.repositoryDir + "/extensions/core"
-
-
-
-  def buildNupicCoreFromGitClone(self, nupicCoreCommitish,
-                                 nupicCoreLocalPackage, nupicCoreReleaseDir,
-                                 nupicCoreRemote, nupicCoreSourceDir):
-    print ("Building nupic.core from local checkout "
-           + nupicCoreSourceDir + "...")
-    # Remove the local package file, which didn't get populated due to the
-    # download failure.
-    if os.path.exists(nupicCoreLocalPackage):
-      os.remove(nupicCoreLocalPackage)
-
-    # Get nupic.core dependency through git.
-    if not os.path.exists(nupicCoreSourceDir + "/.git"):
-      # There's not a git repo in nupicCoreSourceDir, so we can blow the
-      # whole directory away and clone nupic.core there.
-      shutil.rmtree(nupicCoreSourceDir, True)
-      os.makedirs(nupicCoreSourceDir)
-      cloneCommand = ["git", "clone", nupicCoreRemote, nupicCoreSourceDir, "--depth=50"]
-      print " ".join(cloneCommand)
-      process = subprocess.Popen(cloneCommand,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-      process.communicate()
-      if process.returncode != 0:
-        raise Exception("Fatal Error: Unable to clone %s into %s"
-                        % (nupicCoreRemote, nupicCoreSourceDir))
-    else:
-      # Fetch if already cloned.
-      gitFetchCmd = ["git", "fetch", nupicCoreRemote]
-      print " ".join(gitFetchCmd)
-      process = subprocess.Popen(gitFetchCmd,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE,
-                                 cwd=nupicCoreSourceDir)
-      process.communicate()
-      if process.returncode != 0:
-        raise Exception("Fatal Error: Unable to fetch %s"
-                        % nupicCoreRemote)
-
-    # Get the exact SHA we need for nupic.core.
-    gitResetCmd = ["git", "reset", "--hard", nupicCoreCommitish]
-    print " ".join(gitResetCmd)
-    process = subprocess.Popen(gitResetCmd,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               cwd=nupicCoreSourceDir)
-    process.communicate()
-    if process.returncode != 0:
-      raise Exception("Fatal Error: Unable to checkout %s in %s"
-                      % (nupicCoreCommitish, nupicCoreSourceDir))
-
-    # Execute the Make scripts
-    process = subprocess.Popen(["git", "clean", "-fdx"],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               cwd=nupicCoreSourceDir)
-    process.communicate()
-    if process.returncode != 0:
-      raise Exception(
-        "Fatal Error: Compiling 'nupic.core' library within %s failed."
-        % self.repositoryDir
-      )
-
-    # Build and set external libraries
-    print "Building 'nupic.core' library..."
-    makeWorkingDir = "%s/build/scripts" % nupicCoreSourceDir
-    # Clean 'build/scripts' subfolder at submodule folder
-    shutil.rmtree(nupicCoreSourceDir + "/build/scripts", True)
-    os.makedirs(nupicCoreSourceDir + "/build/scripts")
-    shutil.rmtree(nupicCoreReleaseDir, True)
-    # Generate the Make scripts
-    cmakeCmd = ["cmake",
-                "%s/src" % nupicCoreSourceDir,
-                "-DCMAKE_INSTALL_PREFIX=%s" % nupicCoreReleaseDir]
-    print " ".join(cmakeCmd)
-    process = subprocess.Popen(cmakeCmd,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               cwd=makeWorkingDir)
-    cmakeStdOut, cmakeStdErr = process.communicate()
-    if process.returncode != 0:
-      print cmakeStdErr
-      raise Exception(
-        "Fatal Error: cmake command failed in %s!"
-        % makeWorkingDir
-      )
-    else:
-      print cmakeStdOut
-      print "CMake complete."
-
-    # Execute the Make scripts
-    if "user-make-command" in self.options:
-      userMakeCommand = [self.options["user-make-command"]]
-    else:
-      userMakeCommand = ["make"]
-    userMakeCommand = userMakeCommand + ["install", "-j4"]
-    print " ".join(userMakeCommand)
-    process = subprocess.Popen(userMakeCommand,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               cwd=makeWorkingDir)
-    makeStdOut, makeStdErr = process.communicate()
-    if process.returncode != 0:
-      print makeStdErr
-      raise Exception(
-        "Fatal Error: make command failed in %s!"
-        % makeWorkingDir
-      )
-    else:
-      print makeStdOut
-      print "Make complete."
-    print "Done building nupic.core."
 
 
 
@@ -637,14 +448,9 @@ For more information, see http://numenta.org or the NuPIC wiki at https://github
         # be cleaner with something like `python setup.py clean`.
 
         if not downloadSuccess:
-          print ("WARNING:\n\tRemote nupic.core download of %s failed!"
+          raise Exception("WARNING:\n\tRemote nupic.core download of %s failed!"
                  "\n\tBuilding nupic.core locally from SHA: %s.\n"
                  % (nupicCoreRemoteUrl, nupicCoreCommitish))
-          self.buildNupicCoreFromGitClone(nupicCoreCommitish,
-                                          nupicCoreLocalPackage,
-                                          nupicCoreReleaseDir, nupicCoreRemote,
-                                          nupicCoreSourceDir)
-
         else:
           print "Download successful."
           self.unpackFile(nupicCoreLocalPackage,
@@ -750,6 +556,89 @@ For more information, see http://numenta.org or the NuPIC wiki at https://github
 
 
 
+  def setup(self):
+    # Build and setup NuPIC
+    os.chdir(self.repositoryDir)
+    nupicCoreReleaseDir = self.prepareNupicCore()
+    extensions = self.getExtensionModules(nupicCoreReleaseDir)
+    setuptools.setup(
+      name="nupic",
+      version=self.getVersion(),
+      cmdclass={'build': CustomBuild, 'install': CustomInstall},
+      install_requires=self.findRequirements(),
+      packages=setuptools.find_packages(),
+      # A lot of this stuff may not be packaged properly, most of it was added
+      # in an effort to get a binary package prepared for nupic.regression
+      # testing on Travis-CI, but it wasn't done the right way. I'll be
+      # refactoring a lot of this for
+      # https://github.com/numenta/nupic/issues/408, so this will be changing
+      # soon. -- Matt
+      package_data={
+        "nupic.support": ["nupic-default.xml",
+                          "nupic-logging.conf"],
+        "nupic": ["README.md", "LICENSE.txt"],
+        "nupic.bindings": ["*.so", "*.dll", "*.i"],
+        "nupic.data": ["*.json"],
+        "nupic.frameworks.opf.exp_generator": ["*.json", "*.tpl"],
+        "nupic.frameworks.opf.jsonschema": ["*.json"],
+        "nupic.support.resources.images": [
+          "*.png", "*.gif", "*.ico", "*.graffle"],
+        "nupic.swarming.jsonschema": ["*.json"]
+      },
+      include_package_data=True,
+      ext_modules=extensions,
+      description="Numenta Platform for Intelligent Computing",
+      author="Numenta",
+      author_email="help@numenta.org",
+      url="https://github.com/numenta/nupic",
+      classifiers=[
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
+        "License :: OSI Approved :: GNU General Public License (GPL)",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX :: Linux",
+        # It has to be "5 - Production/Stable" or else pypi rejects it!
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence"
+      ],
+      long_description = """\
+Numenta Platform for Intelligent Computing: a machine intelligence platform that implements the HTM learning algorithms. HTM is a detailed computational theory of the neocortex. At the core of HTM are time-based continuous learning algorithms that store and recall spatial and temporal patterns. NuPIC is suited to a variety of problems, particularly anomaly detection and prediction of streaming data sources.
+
+For more information, see http://numenta.org or the NuPIC wiki at https://github.com/numenta/nupic/wiki.
+""")
+
+
+    # Copy binaries located at nupic.core dir into source dir
+    print "Copying binaries from " + nupicCoreReleaseDir + "/bin" + " to " \
+          + self.repositoryDir + "/bin..."
+    if not os.path.exists(self.repositoryDir + "/bin"):
+      os.makedirs(self.repositoryDir + "/bin")
+    shutil.copy(
+      nupicCoreReleaseDir + "/bin/py_region_test", self.repositoryDir + "/bin"
+    )
+
+    # Copy bindings located at build dir into source dir
+    buildDir = glob.glob(self.repositoryDir + "/build/lib.*/")[0]
+    bindingsBuildDir = buildDir + "/nupic/bindings"
+    bindingsSourceDir = self.repositoryDir + "/nupic/bindings"
+    bindingLibraries = ["engine_internal", "algorithms", "math"]
+    print "Copying libraries from " + buildDir + " to " \
+          + self.repositoryDir + "..."
+    for library in bindingLibraries:
+      shutil.copy(bindingsBuildDir + "/" + library + ".py", bindingsSourceDir)
+      shutil.copy(
+        bindingsBuildDir + "/" + "_" + library + self.getSharedLibExtension(),
+        bindingsSourceDir
+      )
+
+    # Copy cpp_region located at build dir into source dir
+    shutil.copy(buildDir + "/nupic/" + self.getLibPrefix() + "cpp_region" +
+                self.getSharedLibExtension(), self.repositoryDir + "/nupic")
+
+
+
 class CustomBuild(build):
   def run(self):
     # Compile extensions before python modules to avoid that SWIG generated
@@ -769,5 +658,4 @@ class CustomInstall(install):
 
 
 if __name__ == '__main__':
-  setup = Setup()
-  setup.setup()
+  Setup().setup()
