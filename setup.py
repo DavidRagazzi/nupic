@@ -117,7 +117,7 @@ class Setup:
     elif "darwin" in sys.platform:
       platform = "darwin"
     elif "win" in sys.platform:
-      platform = "windows"
+      platform = "win"
     else:
       raise Exception("Platform '%s' is unsupported!" % sys.platform)
 
@@ -251,9 +251,6 @@ class Setup:
       extra_objects=commonObjects)
     extensions.append(libDynamicCppRegion)
 
-    # TODO: Find way to include HtmTest executable as extension. Not sure if
-    # this is possible -- David
-
     #
     # SWIG
     #
@@ -349,7 +346,7 @@ class Setup:
     """
     if self.platform == "linux" or self.platform == "darwin":
       return "lib"
-    elif self.platform == "windows":
+    elif self.platform == "win":
       return ""
 
 
@@ -360,7 +357,7 @@ class Setup:
     """
     if self.platform == "linux" or self.platform == "darwin":
       return ".a"
-    elif self.platform == "windows":
+    elif self.platform == "win":
       return ".lib"
 
 
@@ -371,7 +368,7 @@ class Setup:
     """
     if self.platform == "linux" or self.platform == "darwin":
       return ".so"
-    elif self.platform == "windows":
+    elif self.platform == "win":
       return ".dll"
 
 
@@ -460,7 +457,7 @@ class Setup:
     else:
       print "Using nupic.core binaries at " + nupicCoreReleaseDir
 
-    if "skip-compare-versions" in self.options:
+    if self.getCommandLineOption("skip-compare-versions"):
       skipCompareVersions = True
     else:
       skipCompareVersions = not fetchNupicCore
@@ -577,7 +574,6 @@ class Setup:
         "nupic.support": ["nupic-default.xml",
                           "nupic-logging.conf"],
         "nupic": ["README.md", "LICENSE.txt"],
-        "nupic.bindings": ["*.so", "*.dll", "*.i"],
         "nupic.data": ["*.json"],
         "nupic.frameworks.opf.exp_generator": ["*.json", "*.tpl"],
         "nupic.frameworks.opf.jsonschema": ["*.json"],
