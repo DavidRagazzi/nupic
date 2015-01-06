@@ -464,9 +464,8 @@ class Setup:
 
     if not skipCompareVersions:
       # Compare expected version of nupic.core against installed version
-      file = open(nupicCoreReleaseDir + "/include/nupic/Version.hpp", "r")
-      content = file.read()
-      file.close()
+      with open(os.path.join(nupicCoreReleaseDir, "include/nupic/Version.hpp"), "r") as file:
+        content = file.read()
       nupicCoreVersionFound = re.search(
         "#define NUPIC_CORE_VERSION \"([a-z0-9]+)\"", content
       ).group(1)
@@ -488,7 +487,7 @@ class Setup:
     """
 
     if not silent:
-      print "Downloading from\n\t%s\nto\t%s.\n" % (url, destFile);
+      print "Downloading from\n\t%s\nto\t%s.\n" % (url, destFile)
 
     destDir = os.path.dirname(destFile)
     if not os.path.exists(destDir):
@@ -499,34 +498,32 @@ class Setup:
     except urllib2.URLError:
       return False
 
-    file = open(destFile, "wb")
+    with open(destFile, "wb") as file:
 
-    totalSize = response.info().getheader('Content-Length').strip()
-    totalSize = int(totalSize)
-    bytesSoFar = 0
+      totalSize = response.info().getheader('Content-Length').strip()
+      totalSize = int(totalSize)
+      bytesSoFar = 0
 
-    # Download chunks writing them to target file
-    chunkSize = 8192
-    oldPercent = 0
-    while True:
-      chunk = response.read(chunkSize)
-      bytesSoFar += len(chunk)
+      # Download chunks writing them to target file
+      chunkSize = 8192
+      oldPercent = 0
+      while True:
+        chunk = response.read(chunkSize)
+        bytesSoFar += len(chunk)
 
-      if not chunk:
-        break
+        if not chunk:
+          break
 
-      file.write(chunk)
+        file.write(chunk)
 
-      # Show progress
-      if not silent:
-        percent = (float(bytesSoFar) / totalSize) * 100
-        percent = int(percent)
-        if percent != oldPercent and percent % 5 == 0:
-          print ("Downloaded %i of %i bytes (%i%%)."
-                 % (bytesSoFar, totalSize, int(percent)))
-          oldPercent = percent
-
-    file.close()
+        # Show progress
+        if not silent:
+          percent = (float(bytesSoFar) / totalSize) * 100
+          percent = int(percent)
+          if percent != oldPercent and percent % 5 == 0:
+            print ("Downloaded %i of %i bytes (%i%%)."
+                   % (bytesSoFar, totalSize, int(percent)))
+            oldPercent = percent
 
     return True
 
