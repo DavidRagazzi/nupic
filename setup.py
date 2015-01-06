@@ -445,9 +445,9 @@ class Setup:
         # be cleaner with something like `python setup.py clean`.
 
         if not downloadSuccess:
-          raise Exception("WARNING:\n\tRemote nupic.core download of %s failed!"
-                 "\n\tBuilding nupic.core locally from SHA: %s.\n"
-                 % (nupicCoreRemoteUrl, nupicCoreCommitish))
+          raise Exception("Failed to download nupic.core tarball from %s}! "
+                          "Ensure you have an internet connection and that the "
+                          "remote tarball exists." % nupicCoreRemoteUrl)
         else:
           print "Download successful."
           self.unpackFile(nupicCoreLocalPackage,
