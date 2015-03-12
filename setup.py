@@ -7,6 +7,7 @@ import urllib2
 import tarfile
 import re
 import numpy
+import distutils
 from setuptools import setup, find_packages, Extension
 
 """
@@ -17,6 +18,7 @@ NUPIC_CORE_BUCKET = (
   "https://s3-us-west-2.amazonaws.com/artifacts.numenta.org/numenta/nupic.core"
 )
 REPO_DIR = os.path.dirname(os.path.realpath(__file__))
+HOME_DIR = ""
 DARWIN_PLATFORM = "darwin"
 LINUX_PLATFORM = "linux"
 UNIX_PLATFORMS = [LINUX_PLATFORM, DARWIN_PLATFORM]
@@ -170,21 +172,46 @@ def getPlatformInfo():
   Identify platform
   """
 
+  HOME_DIR = "HOME"
   if "linux" in sys.platform:
     platform = "linux"
   elif "darwin" in sys.platform:
     platform = "darwin"
-  elif "windows" in sys.platform:
+  elif "win32" in sys.platform:
     platform = "windows"
+    HOME_DIR = "USERPROFILE"
   else:
     raise Exception("Platform '%s' is unsupported!" % sys.platform)
 
-  if sys.maxsize > 2**32:
+  # Python 32-bits doesn't detect Windows 64-bits so the workaround is 
+  # check whether "ProgramFiles (x86)" environment variable exists.
+  is64bits = (sys.maxsize > 2**32 or 
+    (platform in WINDOWS_PLATFORMS and 'PROGRAMFILES(X86)' in os.environ))
+  if is64bits:
     bitness = "64"
   else:
     bitness = "32"
 
   return platform, bitness
+
+
+
+def getCompilerInfo():
+  """
+  Identify compiler
+  """
+
+  cxxCompiler = distutils.ccompiler.get_default_compiler()
+  if "msvc" in cxxCompiler:
+    cxxCompiler = "MSVC"
+  elif "clang" in cxxCompiler:
+    cxxCompiler = "Clang"
+  elif "gnu" in cxxCompiler:
+    cxxCompiler = "GNU"
+  else:
+    raise Exception("C++ compiler '%s' is unsupported!" % cxxCompiler)
+
+  return cxxCompiler
 
 
 
@@ -270,9 +297,9 @@ def extractNupicCoreTarget():
     execfile(
       os.path.join(REPO_DIR, ".nupic_config"), {}, nupicConfig
     )
-  elif os.path.exists(os.environ["HOME"] + "/.nupic_config"):
+  elif os.path.exists(HOME_DIR + "/.nupic_config"):
     execfile(
-      os.path.join(os.environ["HOME"], ".nupic_config"), {}, nupicConfig
+      os.path.join(HOME_DIR, ".nupic_config"), {}, nupicConfig
     )
   else:
     execfile(
@@ -306,7 +333,12 @@ def getExtensionModules(nupicCoreReleaseDir, platform, bitness, cmdOptions=None)
   #
   pythonPrefix = sys.prefix
   pythonPrefix = pythonPrefix.replace("\\", "/")
-  pythonIncludeDir = pythonPrefix + "/include/python" + pythonVersion
+  if platform in WINDOWS_PLATFORMS:
+    pythonIncludeDir = pythonPrefix + "/include"
+    pythonLib = "python" + pythonVersion.replace(".", "")
+  else:
+    pythonIncludeDir = pythonPrefix + "/include/python" + pythonVersion
+    pythonLib = "python" + pythonVersion
 
   #
   # Finds out version of Numpy and headers' path.
@@ -324,6 +356,29 @@ def getExtensionModules(nupicCoreReleaseDir, platform, bitness, cmdOptions=None)
     ("NTA_ASM", None),
     ("HAVE_CONFIG_H", None),
     ("BOOST_NO_WREGEX", None)]
+  if platform in WINDOWS_PLATFORMS:
+    commonDefines.extend([
+      ("PSAPI_VERSION", "1"),
+      ("APR_DECLARE_STATIC", None),
+      ("APU_DECLARE_STATIC", None),
+      ("ZLIB_WINAPI", None),
+      ("WIN32", None),
+      ("_WINDOWS", None),
+      ("_MBCS", None),
+      ("_CRT_SECURE_NO_WARNINGS", None),
+      ("NDEBUG", None)])
+  else:
+    commonDefines.append(("HAVE_UNISTD_H", None))
+  if cxxCompiler == "GNU":
+    commonDefines.append(("NTA_COMPILER_GNU", None))
+  elif cxxCompiler == "Clang":
+    commonDefines.append(("NTA_COMPILER_CLANG", None))
+  elif cxxCompiler == "MSVC":
+    commonDefines.extend([
+      ("NTA_COMPILER_MSVC", None),
+      ("CAPNP_LITE", "1"),
+      ("_VARIADIC_MAX", "10"),
+      ("NOMINMAX", None)])
 
   commonIncludeDirs = [
     REPO_DIR + "/external/" + platform + bitness + "/include",
@@ -334,64 +389,97 @@ def getExtensionModules(nupicCoreReleaseDir, platform, bitness, cmdOptions=None)
     pythonIncludeDir,
     numpyIncludeDir]
 
-  commonCompileFlags = [
-    # Adhere to c++11 spec
-    "-std=c++11",
-    # Generate 32 or 64 bit code
-    "-m" + bitness,
-    # `position independent code`, required for shared libraries
-    "-fPIC",
-    "-fvisibility=hidden",
-    "-Wall",
-    "-Wextra",
-    "-Wreturn-type",
-    "-Wunused",
-    "-Wno-unused-parameter",
-    # optimization flags (generic builds used for binary distribution)
-    "-mtune=generic",
-    "-O2",
-  ]
-  if platform == "darwin":
+  if cxxCompiler == "MSVC":
+    commonCompileFlags = [
+      "/TP",
+      "/Zc:wchar_t",
+      "/Gm-",
+      "/fp:precise",
+      "/errorReport:prompt",
+      "/W3",
+      "/WX-",
+      "/GR",
+      "/Gd",
+      "/GS-",
+      "/Oy-",
+      "/EHs",
+      "/analyze-",
+      "/nologo"]
+    commonLinkFlags = [
+      "/NOLOGO",
+      "/SAFESEH:NO",
+      "/NODEFAULTLIB:LIBCMT",
+      "/LIBPATH:" + pythonPrefix + "/libs",
+      "/LIBPATH:" + nupicCoreReleaseDir + "/lib"]
+    if bitness == "32":
+      commonLinkFlags.append("/MACHINE:X86")
+    else:
+      commonLinkFlags.append("/MACHINE:X" + bitness)
+  else:
+    commonCompileFlags = [
+      # Adhere to c++11 spec
+      "-std=c++11",
+      # Generate 32 or 64 bit code
+      "-m" + bitness,
+      # `position independent code`, required for shared libraries
+      "-fPIC",
+      "-fvisibility=hidden",
+      "-Wall",
+      "-Wextra",
+      "-Wreturn-type",
+      "-Wunused",
+      "-Wno-unused-parameter",
+      # optimization flags (generic builds used for binary distribution)
+      "-mtune=generic",
+      "-O2"]
+    commonLinkFlags = [
+      "-m" + bitness,
+      "-fPIC",
+      "-L" + nupicCoreReleaseDir + "/lib",
+      # for Cap'n'Proto serialization
+      "-lkj",
+      "-lcapnp",
+      "-lcapnpc",
+      # optimization (safe defaults)
+      "-O2"]
+  if platform == DARWIN_PLATFORM:
     commonCompileFlags.append("-stdlib=libc++")
-
-  commonLinkFlags = [
-    "-m" + bitness,
-    "-fPIC",
-    "-L" + nupicCoreReleaseDir + "/lib",
-    # for Cap'n'Proto serialization
-    "-lkj",
-    "-lcapnp",
-    "-lcapnpc",
-    # optimization (safe defaults)
-    "-O2",
-  ]
 
   # Optimizations
   if cmdOptions is not None and getCommandLineOption("optimizations-native", cmdOptions):
-    commonCompileFlags.append("-march=native")
-    commonCompileFlags.append("-O3")
-    commonLinkFlags.append("-O3")
+    if cxxCompiler != "MSVC":
+      commonCompileFlags.extend([
+        "-march=native",
+        "-O3"])
+      commonLinkFlags.append("-O3")
   if cmdOptions is not None and getCommandLineOption("optimizations-lto", cmdOptions):
-    commonCompileFlags.append("-fuse-linker-plugin")
-    commonCompileFlags.append("-flto-report")
-    commonCompileFlags.append("-fuse-ld=gold")
-    commonCompileFlags.append("-flto")
-    commonLinkFlags.append("-flto")
-
-
+    if cxxCompiler != "MSVC":
+      commonCompileFlags.extend([
+        "-fuse-linker-plugin",
+        "-flto-report",
+        "-fuse-ld=gold",
+        "-flto"])
+      commonLinkFlags.append("-flto")
 
   commonLibraries = [
-    "dl",
-    "python" + pythonVersion,
+    pythonLib,
+    "nupic_core",
+    "gtest",
     "kj",
     "capnp",
-    "capnpc"]
-  if platform == "linux":
-    commonLibraries.extend(["pthread"])
-
-  commonObjects = [
-    nupicCoreReleaseDir + "/lib/" +
-      getLibPrefix(platform) + "nupic_core" + getStaticLibExtension(platform)]
+    #"capnpc",
+    ]
+  if platform in UNIX_PLATFORMS:
+    commonLibraries.append("dl")
+    if platform == LINUX_PLATFORM:
+      commonLibraries.append("pthread")
+  elif platform in WINDOWS_PLATFORMS:
+    commonLibraries.extend([
+      "oldnames",
+      "psapi",
+      "ws2_32",
+      "shell32",
+      "advapi32"])
 
   pythonSupportSources = [
     "extensions/py_support/NumpyVector.cpp",
@@ -406,12 +494,12 @@ def getExtensionModules(nupicCoreReleaseDir, platform, bitness, cmdOptions=None)
     extra_compile_args=commonCompileFlags,
     define_macros=commonDefines,
     extra_link_args=commonLinkFlags,
+    export_symbols=None,
     include_dirs=commonIncludeDirs,
     libraries=commonLibraries,
     sources=pythonSupportSources +
       ["extensions/cpp_region/PyRegion.cpp",
-       "extensions/cpp_region/unittests/PyHelpersTest.cpp"],
-    extra_objects=commonObjects)
+       "extensions/cpp_region/unittests/PyHelpersTest.cpp"])
   extensions.append(libDynamicCppRegion)
 
   #
@@ -468,8 +556,7 @@ def getExtensionModules(nupicCoreReleaseDir, platform, bitness, cmdOptions=None)
     extra_link_args=commonLinkFlags,
     include_dirs=commonIncludeDirs,
     libraries=commonLibraries,
-    sources=pythonSupportSources + [wrapAlgorithms],
-    extra_objects=commonObjects)
+    sources=pythonSupportSources + [wrapAlgorithms])
   extensions.append(libModuleAlgorithms)
 
   wrapEngineInternal = generateSwigWrap(swigExecutable,
@@ -482,8 +569,7 @@ def getExtensionModules(nupicCoreReleaseDir, platform, bitness, cmdOptions=None)
     extra_link_args=commonLinkFlags,
     include_dirs=commonIncludeDirs,
     libraries=commonLibraries,
-    sources=pythonSupportSources + [wrapEngineInternal],
-    extra_objects=commonObjects)
+    sources=pythonSupportSources + [wrapEngineInternal])
   extensions.append(libModuleEngineInternal)
 
   wrapMath = generateSwigWrap(swigExecutable,
@@ -497,8 +583,7 @@ def getExtensionModules(nupicCoreReleaseDir, platform, bitness, cmdOptions=None)
     include_dirs=commonIncludeDirs,
     libraries=commonLibraries,
     sources=pythonSupportSources + [wrapMath,
-                                    "nupic/bindings/PySparseTensor.cpp"],
-    extra_objects=commonObjects)
+                                    "nupic/bindings/PySparseTensor.cpp"])
   extensions.append(libModuleMath)
 
   return extensions
@@ -617,10 +702,14 @@ def postProcess():
 
 options = getCommandLineOptions()
 platform, bitness = getPlatformInfo()
+cxxCompiler = getCompilerInfo()
 
 if platform == DARWIN_PLATFORM and not "ARCHFLAGS" in os.environ:
   raise Exception("To build NuPIC in OS X, you must "
                   "`export ARCHFLAGS=\"-arch x86_64\"`.")
+elif platform in WINDOWS_PLATFORMS and not "VS90COMNTOOLS" in os.environ:
+  raise Exception("To build NuPIC in Windows, you must "
+                  "`set VS90COMNTOOLS=%VS140COMNTOOLS%`.")
 
 # Build and setup NuPIC
 cwd = os.getcwd()

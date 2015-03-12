@@ -48,6 +48,13 @@ static bool finalizePython;
 
 extern "C" 
 {
+
+  // initcpp_region() is just a ghost method used to make distutils happy.
+  // distutils tries export this symbol when build this shared library.
+  NTA_EXPORT void initcpp_region()
+  {
+  }
+
   // NTA_initPython() must be called by the MultinodeFactory before any call to 
   // NTA_createPyNode()
   NTA_EXPORT void NTA_initPython()

@@ -13,6 +13,7 @@ NuPIC binaries are available for:
 - Linux x86 64b
 - OS X 10.9
 - OS X 10.10
+- Windows 64b
 
 #### Dependencies
 
@@ -30,6 +31,10 @@ NuPIC binaries are available for:
 > The Linux wheel file is hosted on AWS S3 instead of on the standard PyPi servers because [Linux wheels are not allowed to be uploaded to pypi](https://bitbucket.org/pypa/pypi-metadata-formats/issue/15/enhance-the-platform-tag-definition-for) yet.
 
     pip install https://s3-us-west-2.amazonaws.com/artifacts.numenta.org/numenta/nupic/releases/nupic-0.2.1-cp27-none-linux_x86_64.whl
+
+### Windows
+
+    pip install nupic
 
 
 ### _Having problems?_
@@ -49,6 +54,7 @@ For details about checking out this repository and building in your local enviro
 
  Please see the [Contributing to NuPIC](https://github.com/numenta/nupic/wiki/Contributing-to-NuPIC) wiki page.
 
- * Build: [![Build Status](https://travis-ci.org/numenta/nupic.png?branch=master)](https://travis-ci.org/numenta/nupic)
+ * *nix Build: [![*nix Build Status](https://travis-ci.org/numenta/nupic.png?branch=master)](https://travis-ci.org/numenta/nupic)
+#TODO: * Windows Build: [![*nix Build Status]()
  * Unit Test Coverage: [![Coverage Status](https://coveralls.io/repos/numenta/nupic/badge.png?branch=master)](https://coveralls.io/r/numenta/nupic?branch=master)
  * [Regression Tests](https://github.com/numenta/nupic.regression): [![Build Status](https://travis-ci.org/numenta/nupic.regression.svg?branch=master)](https://travis-ci.org/numenta/nupic.regression)
