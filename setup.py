@@ -289,6 +289,17 @@ def getSharedLibExtension(platform):
 
 
 
+def getExeExtension(platform):
+  """
+  Returns the default system extension of an executable.
+  """
+  if platform in UNIX_PLATFORMS:
+    return ""
+  elif platform in WINDOWS_PLATFORMS:
+    return ".exe"
+
+
+
 
 def extractNupicCoreTarget():
   # First, get the nupic.core SHA and remote location from local config.
@@ -692,9 +703,13 @@ def postProcess():
   if not os.path.exists(REPO_DIR + "/bin"):
     os.makedirs(REPO_DIR + "/bin")
   shutil.copy(
-    nupicCoreReleaseDir + "/bin/py_region_test", REPO_DIR + "/bin"
+    nupicCoreReleaseDir + "/bin/py_region_test" + getExeExtension(platform), REPO_DIR + "/bin"
   )
   # Copy cpp_region located at build dir into source dir
+  if platform in WINDOWS_PLATFORMS:
+    # By default, shared libs use "pyd" extension in Windows
+    os.rename(buildDir + "/nupic/" + getLibPrefix(platform) + "cpp_region.pyd",
+              buildDir + "/nupic/" + getLibPrefix(platform) + "cpp_region.dll")
   shutil.copy(buildDir + "/nupic/" + getLibPrefix(platform) + "cpp_region" +
               getSharedLibExtension(platform), REPO_DIR + "/nupic")
 
